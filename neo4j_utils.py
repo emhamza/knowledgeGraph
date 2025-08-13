@@ -142,25 +142,37 @@ class Neo4jDataIngestor:
         print(f"Successfully ingested product: {product['name']}")
 
     @staticmethod
-    def _create_variant_node(tx, variant):
-        tx.run("""
-            MERGE (v:Variant {variant_id: $variant_id})
-            ON CREATE SET
-                v.sku = $sku,
-                v.name = $name,
-                v.status = $status,
-                v.deleted = $deleted,
-                v.variation_type = $variation_type,
-                v.created_at = $created_at,
-                v.updated_at = $updated_at,
-                v.list_price = toString($list_price),
-                v.variations = toString($variations),
-                v.physical_attributes = toString($physical_attributes),
-                v.media = toString($media),
-                v.inventory_summary = toString($inventory_summary),
-                v.sales_channels = toString($sales_channels),
-                v.external_identifiers = toString($external_identifiers)
-        """,
+    def _ingest_variant(tx, variant):
+        """
+        Ingests a single variant, creating the variant node and its
+        relationship to the Product node in a single, optimized Cypher query.
+        """
+        tx.run(""" 
+               // MERGE the Variant node
+               MERGE (v:Variant {variant_id: $variant_id})
+               ON CREATE SET
+                   v.sku = $sku,
+                   v.name = $name,
+                   v.status = $status,
+                   v.deleted = $deleted,
+                   v.variation_type = $variation_type,
+                   v.created_at = $created_at,
+                   v.updated_at = $updated_at,
+                   v.list_price = toString($list_price),
+                   v.variations = toString($variations),
+                   v.physical_attributes = toString($physical_attributes),
+                   v.media = toString($media),
+                   v.inventory_summary = toString($inventory_summary),
+                   v.sales_channels = toString($sales_channels),
+                   v.external_identifiers = toString($external_identifiers)
+
+               // MATCH the existing Product node
+               WITH v, $product_id AS product_id
+               MATCH (p:Product {product_id: product_id})
+
+               // MERGE the relationship
+               MERGE (p)-[:HAS]->(v)
+               """,
                variant_id=variant["variant_id"],
                sku=variant["sku"],
                name=variant["name"],
@@ -175,22 +187,9 @@ class Neo4jDataIngestor:
                media=json.dumps(variant.get("media", [])),
                inventory_summary=json.dumps(variant.get("inventory_summary", [])),
                sales_channels=json.dumps(variant.get("sales_channels", [])),
-               external_identifiers=json.dumps(variant.get("external_identifiers", []))
+               external_identifiers=json.dumps(variant.get("external_identifiers", [])),
+               product_id=variant["product_id"]  # Pass product_id for relationship
                )
-
-    @staticmethod
-    def _create_product_variant_relationship(tx, variant):
-        tx.run(""" 
-            MATCH (p:Product {product_id: $product_id})
-            MATCH (v:Variant {variant_id: $variant_id})
-            MERGE (p)-[:HAS]->(v)""",
-               product_id=variant["product_id"],
-               variant_id=variant["variant_id"]
-               )
-
-    def _ingest_variant(self, tx, variant):
-        self._create_variant_node(tx, variant)
-        self._create_product_variant_relationship(tx, variant)
         print(f"Successfully ingested variant: {variant['name']}")
 
     @staticmethod
@@ -285,34 +284,40 @@ class Neo4jDataIngestor:
         print(f"Successfully ingested order: {order['order_number']}")
 
     @staticmethod
-    def _create_inventory_node(tx, inventory):
+    def _ingest_inventory(tx, inventory):
+        """
+        Ingests a single inventory record, creating the Inventory node and its
+        relationship to the Variant node in a single, optimized Cypher query.
+        """
         tx.run("""
-            MERGE (inv:Inventory {inventory_id: $inventory_id})
-            ON CREATE SET
-                inv.quantity = toString($quantity),
-                inv.created_at = $created_at,
-                inv.updated_at = $updated_at
-        """,
+                // MATCH the Variant node that this inventory record is for
+                MATCH (v:Variant {variant_id: $variant_id})
+
+                // MERGE the Inventory node, creating it if it doesn't exist
+                MERGE (inv:Inventory {inventory_id: $inventory_id})
+                ON CREATE SET
+                    inv.created_at = $created_at,
+                    inv.updated_at = $updated_at
+
+                // MERGE the relationship and add properties to it
+                MERGE (inv)-[r:RECORDS_STOCK_FOR]->(v)
+                ON CREATE SET 
+                    r.total = $total, 
+                    r.sellable = $sellable, 
+                    r.reserved = $reserved
+                ON MATCH SET
+                    r.total = $total, 
+                    r.sellable = $sellable, 
+                    r.reserved = $reserved
+                """,
                inventory_id=inventory["inventory_id"],
-               quantity=json.dumps(inventory["quantity"]),
-               created_at=inventory["created_at"],
-               updated_at=inventory["updated_at"]
-               )
-
-    @staticmethod
-    def _create_inventory_variant_relationship(tx, inventory):
-        tx.run("""
-            MATCH (v:Variant {variant_id: $variant_id})
-            MATCH (inv:Inventory {inventory_id: $inventory_id})
-            MERGE (inv)-[:RECORDS_STOCK_FOR]->(v)
-        """,
                variant_id=inventory["variant_id"],
-               inventory_id=inventory["inventory_id"]
+               created_at=inventory["created_at"],
+               updated_at=inventory["updated_at"],
+               total=inventory["quantity"]["total"],
+               sellable=inventory["quantity"]["sellable"],
+               reserved=inventory["quantity"]["reserved"]
                )
-
-    def _ingest_inventory(self, tx, inventory):
-        self._create_inventory_node(tx, inventory)
-        self._create_inventory_variant_relationship(tx, inventory)
         print(f"Successfully ingested inventory for variant: {inventory['variant_id']}")
 
     @staticmethod
