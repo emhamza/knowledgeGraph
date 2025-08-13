@@ -457,15 +457,15 @@ if __name__ == "__main__":
             inventories_data = []
             customers_data = []
             try:
-                with open('products.json', 'r') as f:
+                with open('ekyam_chat_v3.products.json', 'r') as f:
                     products_data = json.load(f)
-                with open('variants.json', 'r') as f:
+                with open('ekyam_chat_v3.variants.json', 'r') as f:
                     variants_data = json.load(f)
-                with open('orders.json', 'r') as f:
+                with open('ekyam_chat_v3.orders.json', 'r') as f:
                     orders_data = json.load(f)
-                with open('Inventories.json', 'r') as f:
+                with open('ekyam_chat_v3.inventories.json', 'r') as f:
                     inventories_data = json.load(f)
-                with open('customers.json', 'r') as f:
+                with open('ekyam_chat_v3.customers.json', 'r') as f:
                     customers_data = json.load(f)
             except FileNotFoundError as e:
                 print(f"Error: {e}. Please ensure all JSON files exist.")
