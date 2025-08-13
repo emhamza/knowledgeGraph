@@ -331,26 +331,78 @@ class Neo4jDataIngestor:
         print(f"Successfully ingested inventory for variant: {inventory['variant_id']}")
 
     @staticmethod
-    def _create_customer_node(tx, customer):
+    def _ingest_customer(tx, customer):
+        """
+        Ingests a single customer, creating the Customer node and
+        all its associated nodes and relationships in one query.
+        """
+        # Preprocess wishlist to convert 'price_at_add' from a map to a JSON string
+        prepared_wishlist = []
+        for item in customer.get("wishlist", []):
+            item_copy = item.copy()
+            if "price_at_add" in item_copy and isinstance(item_copy["price_at_add"], dict):
+                item_copy["price_at_add"] = json.dumps(item_copy["price_at_add"])
+            prepared_wishlist.append(item_copy)
+
+        # The rest of the ingestion logic remains the same
         tx.run("""
-            MERGE (c:Customer {customer_id: $customer_id})
-            ON CREATE SET
-                c.email = $email,
-                c.first_name = $first_name,
-                c.last_name = $last_name,
-                c.phone = $phone,
-                c.customer_segment = $customer_segment,
-                c.marketing_consent = $marketing_consent,
-                c.personalization_details = toString($personalization_details),
-                c.notes = $notes,
-                c.addresses = toString($addresses),
-                c.payment_methods = toString($payment_methods),
-                c.wishlist = toString($wishlist),
-                c.status = $status,
-                c.deleted = $deleted,
-                c.created_at = $created_at,
-                c.updated_at = $updated_at
-        """,
+                // MERGE the Customer node first
+                MERGE (c:Customer {customer_id: $customer_id})
+                ON CREATE SET
+                    c.email = $email,
+                    c.first_name = $first_name,
+                    c.last_name = $last_name,
+                    c.phone = $phone,
+                    c.customer_segment = $customer_segment,
+                    c.marketing_consent = $marketing_consent,
+                    c.notes = $notes,
+                    c.status = $status,
+                    c.deleted = $deleted,
+                    c.created_at = $created_at,
+                    c.updated_at = $updated_at,
+                    c.personalization_details = toString($personalization_details)
+
+                // Handle Addresses
+                WITH c, $addresses AS addresses
+                UNWIND addresses AS address
+                MERGE (a:Address {address_id: address.address_id})
+                ON CREATE SET
+                    a.label = address.label,
+                    a.receiver_name = address.receiver_name,
+                    a.receiver_phone = address.receiver_phone,
+                    a.street = address.street,
+                    a.city = address.city,
+                    a.state = a.state,
+                    a.zip_code = address.zip_code,
+                    a.country = address.country
+                MERGE (c)-[rel:HAS_ADDRESS]->(a)
+                ON CREATE SET
+                    rel.is_default = address.is_default
+
+                // Handle Payment Methods
+                WITH c, $payment_methods AS payment_methods
+                UNWIND payment_methods AS method
+                MERGE (p:PaymentMethod {payment_method_id: method.payment_method_id})
+                ON CREATE SET
+                    p.type = method.type,
+                    p.gateway_token = method.gateway_token,
+                    p.card_last_four = method.card_last_four,
+                    p.card_brand = method.card_brand,
+                    p.card_expiry_month = method.card_expiry_month,
+                    p.card_expiry_year = method.card_expiry_year
+                MERGE (c)-[rel:HAS_PAYMENT_METHOD]->(p)
+                ON CREATE SET
+                    rel.is_default = method.is_default
+
+                // Handle Wishlist Items
+                WITH c, $wishlist AS wishlist
+                UNWIND wishlist AS item
+                MERGE (v:Variant {variant_id: item.variant_id})
+                MERGE (c)-[w:WISHES_FOR]->(v)
+                ON CREATE SET
+                    w.added_at = item.added_at,
+                    w.price_at_add = item.price_at_add // This is now a JSON string
+                """,
                customer_id=customer["customer_id"],
                email=customer["email"],
                first_name=customer["first_name"],
@@ -358,22 +410,17 @@ class Neo4jDataIngestor:
                phone=customer["phone"],
                customer_segment=customer["customer_segment"],
                marketing_consent=customer["marketing_consent"],
-               personalization_details=json.dumps(customer.get("personalization_details", {})),
                notes=customer["notes"],
-               addresses=json.dumps(customer.get("addresses", [])),
-               payment_methods=json.dumps(customer.get("payment_methods", [])),
-               wishlist=json.dumps(customer.get("wishlist", [])),
                status=customer["status"],
                deleted=customer["deleted"],
                created_at=customer["created_at"],
-               updated_at=customer["updated_at"]
+               updated_at=customer["updated_at"],
+               personalization_details=json.dumps(customer.get("personalization_details", {})),
+               addresses=customer.get("addresses", []),
+               payment_methods=customer.get("payment_methods", []),
+               wishlist=prepared_wishlist  # Pass the prepared list
                )
-
-    def _ingest_customer(self, tx, customer):
-        self._create_customer_node(tx, customer)
         print(f"Successfully ingested customer: {customer['email']}")
-
-
 if __name__ == "__main__":
     # Corrected database name
     db_name = "knowledge-graph"
