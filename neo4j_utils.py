@@ -193,94 +193,104 @@ class Neo4jDataIngestor:
         print(f"Successfully ingested variant: {variant['name']}")
 
     @staticmethod
-    def _create_order_node(tx, order):
+    def _ingest_order(tx, order):
+        """
+        Ingests a single order, creating the Order node and all its
+        associated relationships, including dedicated Shipment nodes.
+        """
+        sales_channel = order.get("sales_channel", {})
+
+        # Prepare the shipments data by converting the shipping_address map to a JSON string
+        prepared_shipments = []
+        for shipment in order.get("shipments", []):
+            shipment_copy = shipment.copy()
+            if "shipping_address" in shipment_copy:
+                shipment_copy["shipping_address"] = json.dumps(shipment_copy["shipping_address"])
+            prepared_shipments.append(shipment_copy)
+
         tx.run("""
-            MERGE (o:Order {order_id: $order_id})
-            ON CREATE SET
-                o.order_number = $order_number,
-                o.status = $status,
-                o.currency = $currency,
-                o.totals = toString($totals),
-                o.payments = toString($payments),
-                o.shipments = toString($shipments),
-                o.applied_promotions = toString($applied_promotions),
-                o.external_references = toString($external_references),
-                o.notes = $notes,
-                o.created_at = $created_at,
-                o.updated_at = $updated_at,
-                o.order_created_date = $order_created_date
-        """,
+                // MERGE the Order node first, as it is the central point
+                MERGE (o:Order {order_id: $order_id})
+                ON CREATE SET
+                    o.order_number = $order_number,
+                    o.status = $status,
+                    o.currency = $currency,
+                    o.notes = $notes,
+                    o.created_at = $created_at,
+                    o.updated_at = $updated_at,
+                    o.order_created_date = $order_created_date,
+                    o.totals = toString($totals),
+                    o.payments = toString($payments),
+                    o.applied_promotions = toString($applied_promotions),
+                    o.external_references = toString($external_references)
+
+                // MERGE the Customer and its relationship to the Order
+                WITH o, $customer_id AS customer_id
+                MERGE (c:Customer {customer_id: customer_id})
+                MERGE (c)-[:PLACED]->(o)
+
+                // Handle Sales Channel (now also representing the BusinessEntity)
+                WITH o, $sales_channel AS sales_channel
+                FOREACH (sc IN CASE WHEN sales_channel.channel_id IS NOT NULL THEN [1] ELSE [] END |
+                    MERGE (salesChannel:SalesChannel {channel_id: sales_channel.channel_id})
+                    ON CREATE SET
+                        salesChannel.name = sales_channel.name,
+                        salesChannel.type = sales_channel.type,
+                        salesChannel.status = sales_channel.status
+                    MERGE (o)-[:PLACED_ON_CHANNEL]->(salesChannel)
+                )
+
+                // Handle Shipments and their items
+                WITH o, $shipments AS shipments
+                UNWIND shipments AS shipment
+                MERGE (s:Shipment {shipment_id: shipment.shipment_id})
+                ON CREATE SET
+                    s.status = shipment.status,
+                    s.carrier = shipment.carrier,
+                    s.tracking_number = shipment.tracking_number,
+                    s.shipped_date = shipment.shipped_date,
+                    s.estimated_delivery_date = shipment.estimated_delivery_date,
+                    s.shipping_address = shipment.shipping_address
+                MERGE (o)-[:HAS_SHIPMENT]->(s)
+
+                // Link Shipment items to Variants
+                WITH o, s, shipment.items AS items
+                UNWIND items AS item
+                MERGE (v:Variant {variant_id: item.variant_id})
+                MERGE (s)-[r:CONTAINS]->(v)
+                ON CREATE SET
+                    r.quantity = item.quantity
+                // The item_name is removed from the relationship.
+
+                // Handle Order Items (Variants) - this is for all items on the order, not just shipments
+                WITH o, $order_items AS order_items
+                UNWIND order_items AS item
+                MERGE (v_order:Variant {variant_id: item.variant_id})
+                MERGE (o)-[ro:CONTAINS]->(v_order)
+                ON CREATE SET
+                    ro.quantity = item.quantity,
+                    ro.line_item_total = item.line_item_total
+                ON MATCH SET
+                    ro.quantity = item.quantity,
+                    ro.line_item_total = item.line_item_total
+            """,
                order_id=order["order_id"],
                order_number=order["order_number"],
                status=order["status"],
                currency=order["currency"],
-               totals=json.dumps(order.get("totals", {})),
-               payments=json.dumps(order.get("payments", [])),
-               shipments=json.dumps(order.get("shipments", [])),
-               applied_promotions=json.dumps(order.get("applied_promotions", [])),
-               external_references=json.dumps(order.get("external_references", [])),
                notes=order.get("notes", ""),
                created_at=order["created_at"],
                updated_at=order["updated_at"],
-               order_created_date=order["order_created_date"]
-               )
-
-    @staticmethod
-    def _create_order_customer_relationships(tx, order):
-        tx.run("""
-            MATCH (o:Order {order_id: $order_id})
-            MERGE (c:Customer {customer_id: $customer_id})
-            MERGE (b:BusinessEntity {business_entity_id: $business_entity_id})
-            MERGE (c)-[:PLACED]->(o)
-            MERGE (o)-[:PLACED_ON_THIS]->(b)
-        """,
-               order_id=order["order_id"],
+               order_created_date=order["order_created_date"],
+               totals=json.dumps(order.get("totals", {})),
+               payments=json.dumps(order.get("payments", [])),
+               applied_promotions=json.dumps(order.get("applied_promotions", [])),
+               external_references=json.dumps(order.get("external_references", [])),
                customer_id=order["customer_id"],
-               business_entity_id=order["business_entity_id"]
+               sales_channel=sales_channel,
+               order_items=order["order_items"],
+               shipments=prepared_shipments
                )
-
-    @staticmethod
-    def _create_order_sales_channel_relationship(tx, order):
-        sales_channel = order.get("sales_channel", {})
-        if sales_channel:
-            tx.run("""
-                MATCH (o:Order {order_id: $order_id})
-                MERGE (sc:SalesChannel {channel_id: $channel_id})
-                ON CREATE SET
-                    sc.name = $name,
-                    sc.type = $type,
-                    sc.status = $status
-                MERGE (o)-[:THROUGH_CHANNEL]->(sc)
-            """,
-                   order_id=order["order_id"],
-                   channel_id=sales_channel["channel_id"],
-                   name=sales_channel["name"],
-                   type=sales_channel["type"],
-                   status=sales_channel["status"]
-                   )
-
-    @staticmethod
-    def _create_order_variant_relationships(tx, order):
-        for item in order["order_items"]:
-            tx.run("""
-                MATCH (o:Order {order_id: $order_id})
-                MERGE (v:Variant {variant_id: $variant_id})
-                MERGE (o)-[r:CONTAINS]->(v)
-                ON CREATE SET
-                    r.quantity = $quantity,
-                    r.line_item_total = $line_item_total
-            """,
-                   order_id=order["order_id"],
-                   variant_id=item["variant_id"],
-                   quantity=item["quantity"],
-                   line_item_total=item["line_item_total"]
-                   )
-
-    def _ingest_order(self, tx, order):
-        self._create_order_node(tx, order)
-        self._create_order_customer_relationships(tx, order)
-        self._create_order_sales_channel_relationship(tx, order)
-        self._create_order_variant_relationships(tx, order)
         print(f"Successfully ingested order: {order['order_number']}")
 
     @staticmethod
