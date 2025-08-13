@@ -40,334 +40,323 @@ def create_database(driver, new_db_name):
 
 
 # --- Data Ingestion Logic ---
-def create_nodes_and_relationships(driver, database_name, product_data, variants_data, orders_data, customers_data,
-                                   inventories_data):
-    """Ingests data from all JSON files into the Neo4j database,
-    creating nodes for all entities and the relationships between them.
-    """
+class Neo4jDataIngestor:
+    def __init__(self, driver, database_name):
+        self.driver = driver
+        self.database_name = database_name
 
-    with driver.session(database=database_name) as session:
-        # use transaction for efficient data loading
-        def ingest_product_transaction(tx, product):
-            # 1. MERGE the main Product node
-            tx.run("""
-                MERGE (p:Product {product_id: $product_id})
-                ON CREATE SET
-                    p.sku = $sku,
-                    p.name = $name,
-                    p.short_description = $short_description,
-                    p.description = $description,
-                    p.list_price = toString($list_price),
-                    p.aggregate_stock = toString($aggregate_stock),
-                    p.physical_attributes = toString($physical_attributes),
-                    p.status = $status,
-                    p.deleted = $deleted,
-                    p.created_at = $created_at
-            """,
-                   product_id=product["product_id"],
-                   sku=product["sku"],
-                   name=product["name"],
-                   short_description=product["short_description"],
-                   description=product["description"],
-                   list_price=json.dumps(product["list_price"]),
-                   aggregate_stock=json.dumps(product["aggregate_stock"]),
-                   physical_attributes=json.dumps(product["physical_attributes"]),
-                   status=product["status"],
-                   deleted=product["deleted"],
-                   created_at=product["created_at"]
-                   )
-            # Use UNWIND to iterate through a list in a single cypher statement
-            # 2. MERGE categories and their relationships
-            tx.run("""
-                MATCH (p:Product {product_id: $product_id})
-                UNWIND $categories AS category
-                MERGE (c:Category {category_id: category.category_id})
-                ON CREATE SET c.name = category.name, c.slug = category.slug
-                MERGE (p)-[:BELONGS_TO]->(c)
-                """,
-                   product_id=product["product_id"],
-                   categories=product["categories"]
-                   )
+    def ingest_data(self, product_data, variants_data, orders_data, customers_data, inventories_data):
+        """Main method to ingest all data"""
+        with self.driver.session(database=self.database_name) as session:
+            for product in product_data:
+                session.execute_write(self._ingest_product, product)
 
-            # 3. MERGE Collections and their relationships
-            tx.run("""
-                MATCH (p:Product {product_id: $product_id})
-                UNWIND $collections AS collection
-                MERGE (c:Collection {collection_id: collection.collection_id})
-                ON CREATE SET c.name = collection.name, c.slug = collection.slug
-                MERGE (p)-[:PART_OF]->(c)
-                """,
-                   product_id=product["product_id"],
-                   collections=product["collections"]
-                   )
+            for variant in variants_data:
+                session.execute_write(self._ingest_variant, variant)
 
-            # 4. MERGE Partners and their relationships
-            tx.run("""
-                MATCH (p:Product {product_id: $product_id})
-                UNWIND $partners AS partner
-                MERGE (pa:Partner {partner_id: partner.partner_id})
-                ON CREATE SET pa.name = partner.name, pa.type = partner.type
-                MERGE (p)-[:SUPPLIED_BY]->(pa)
-                """,
-                   product_id=product["product_id"],
-                   partners=product["partners"]
-                   )
-            # 7. MERGE Brand node and its relationship
-            tx.run("""
-                MATCH (p:Product {product_id: $product_id})
-                MERGE (b:Brand {brand_id: $brand_id})
-                ON CREATE SET b.name = $brand_name
-                MERGE (p)-[:HAS]->(b)
-                """,
-                   product_id=product["product_id"],
-                   brand_id=product["brand"]["id"],
-                   brand_name=product["brand"]["name"]
-                   )
+            for order in orders_data:
+                session.execute_write(self._ingest_order, order)
 
-            # 8. Set Marketing properties on Product node.
-            # Note: since marketing is a nested dictionary, it's better to store it as string for simplicity
-            tx.run("""
-                MATCH (p:Product {product_id: $product_id})
-                SET p.marketing = toString($marketing)
-                """,
-                   product_id=product["product_id"],
-                   marketing=json.dumps(product["marketing"])
-                   )
+            for inventory in inventories_data:
+                session.execute_write(self._ingest_inventory, inventory)
 
-            # 9. Set Tags properties on Product node
-            # The JSON array of tags is converted into a list of strings and stored directly on the node.
-            tx.run("""
-                MATCH (p:Product {product_id: $product_id})
-                SET p.tags = $tags
-                """,
-                   product_id=product["product_id"],
-                   tags=product["tags"]
-                   )
-            print(f"Successfully ingested product: {product['name']}")
+            for customer in customers_data:
+                session.execute_write(self._ingest_customer, customer)
 
-        def ingest_variant_transaction(tx, variant):
-            tx.run("""
-                MERGE (v:Variant {variant_id: $variant_id})
-                ON CREATE SET
-                    v.sku = $sku,
-                    v.name = $name,
-                    v.status = $status,
-                    v.deleted = $deleted,
-                    v.variation_type = $variation_type,
-                    v.created_at = $created_at,
-                    v.updated_at = $updated_at,
-                    v.list_price = toString($list_price),
-                    v.variations = toString($variations),
-                    v.physical_attributes = toString($physical_attributes),
-                    v.media = toString($media),
-                    v.inventory_summary = toString($inventory_summary),
-                    v.sales_channels = toString($sales_channels),
-                    v.external_identifiers = toString($external_identifiers)
-            """,
-                   variant_id=variant["variant_id"],
-                   sku=variant["sku"],
-                   name=variant["name"],
-                   status=variant["status"],
-                   deleted=variant["deleted"],
-                   variation_type=variant["variation_type"],
-                   created_at=variant["created_at"],
-                   updated_at=variant["updated_at"],
-                   list_price=json.dumps(variant.get("list_price", {})),
-                   variations=json.dumps(variant.get("variations", {})),
-                   physical_attributes=json.dumps(variant.get("physical_attributes", {})),
-                   media=json.dumps(variant.get("media", [])),
-                   inventory_summary=json.dumps(variant.get("inventory_summary", [])),
-                   sales_channels=json.dumps(variant.get("sales_channels", [])),
-                   external_identifiers=json.dumps(variant.get("external_identifiers", []))
-                   )
-            # match the corresponding nodes and MERGE the relationship
-            tx.run(""" MATCH (p:Product {product_id: $product_id})
-                MATCH (v:Variant {variant_id: $variant_id})
-                MERGE (p)-[:HAS]->(v)""",
-                   product_id=variant["product_id"],
-                   variant_id=variant["variant_id"]
-                   )
-            print(f"Successfully ingested variant: {variant['name']}")
+    @staticmethod
+    def _ingest_product(tx, product):
+        """
+        Ingests a single product, creating the product node and all its
+        associated relationships in a single, optimized Cypher query.
+        """
+        tx.run("""
+            // MERGE the Product node first, as it is the central point
+            MERGE (p:Product {product_id: $product_id})
+            ON CREATE SET
+                p.sku = $sku,
+                p.name = $name,
+                p.short_description = $short_description,
+                p.description = $description,
+                p.list_price = toString($list_price),
+                p.aggregate_stock = toString($aggregate_stock),
+                p.physical_attributes = toString($physical_attributes),
+                p.status = $status,
+                p.deleted = $deleted,
+                p.created_at = $created_at,
+                p.marketing = toString($marketing),
+                p.tags = $tags,
+                p.media = toString($media),
+                p.compliances = toString($compliances),
+                p.handling_instructions = toString($handling_instructions),
+                p.external_identifiers = toString($external_identifiers)
 
-        def ingest_order_transaction(tx, order):
-            """
-            Ingests a single order entry from JSON.
-            """
-            # MERGE the main Order node
-            tx.run("""
-                MERGE (o:Order {order_id: $order_id})
-                ON CREATE SET
-                    o.order_number = $order_number,
-                    o.status = $status,
-                    o.currency = $currency,
-                    o.totals = toString($totals),
-                    o.payments = toString($payments),
-                    o.shipments = toString($shipments),
-                    o.applied_promotions = toString($applied_promotions),
-                    o.external_references = toString($external_references),
-                    o.notes = $notes,
-                    o.created_at = $created_at,
-                    o.updated_at = $updated_at,
-                    o.order_created_date = $order_created_date
-            """,
-                   order_id=order["order_id"],
-                   order_number=order["order_number"],
-                   status=order["status"],
-                   currency=order["currency"],
-                   totals=json.dumps(order.get("totals", {})),
-                   payments=json.dumps(order.get("payments", [])),
-                   shipments=json.dumps(order.get("shipments", [])),
-                   applied_promotions=json.dumps(order.get("applied_promotions", [])),
-                   external_references=json.dumps(order.get("external_references", [])),
-                   notes=order.get("notes", ""),
-                   created_at=order["created_at"],
-                   updated_at=order["updated_at"],
-                   order_created_date=order["order_created_date"]
-                   )
+            // Handle Categories: MERGE a Category node and link it to the Product
+            WITH p, $categories AS categories
+            UNWIND categories AS category
+            MERGE (c:Category {category_id: category.category_id})
+            ON CREATE SET c.name = category.name, c.slug = category.slug
+            MERGE (p)-[:BELONGS_TO]->(c)
 
-            # Match and MERGE relationships to Customer and BusinessEntity
+            // Handle Collections: MERGE a Collection node and link it
+            WITH p, $collections AS collections
+            UNWIND collections AS collection
+            MERGE (coll:Collection {collection_id: collection.collection_id})
+            ON CREATE SET coll.name = collection.name, coll.slug = collection.slug
+            MERGE (p)-[:PART_OF]->(coll)
+
+            // Handle Partners: MERGE a Partner node and link it
+            WITH p, $partners AS partners
+            UNWIND partners AS partner
+            MERGE (pa:Partner {partner_id: partner.partner_id})
+            ON CREATE SET pa.name = partner.name, pa.type = partner.type
+            MERGE (p)-[:SUPPLIED_BY]->(pa)
+
+            // Handle Brand: MERGE a Brand node and link it
+            WITH p, $brand AS brand
+            MERGE (b:Brand {brand_id: brand.id})
+            ON CREATE SET b.name = brand.name
+            MERGE (p)-[:BELONGS_TO]->(b)
+        """,
+               product_id=product["product_id"],
+               sku=product["sku"],
+               name=product["name"],
+               short_description=product["short_description"],
+               description=product["description"],
+               list_price=json.dumps(product["list_price"]),
+               aggregate_stock=json.dumps(product["aggregate_stock"]),
+               physical_attributes=json.dumps(product["physical_attributes"]),
+               status=product["status"],
+               deleted=product["deleted"],
+               created_at=product["created_at"],
+               marketing=json.dumps(product["marketing"]),
+               tags=product["tags"],
+               media=json.dumps(product["media"]),
+               compliances=json.dumps(product["compliances"]),
+               handling_instructions=json.dumps(product["handling_instructions"]),
+               external_identifiers=json.dumps(product["external_identifiers"]),
+               categories=product["categories"],
+               collections=product["collections"],
+               partners=product["partners"],
+               brand=product["brand"]
+               )
+        print(f"Successfully ingested product: {product['name']}")
+
+    @staticmethod
+    def _create_variant_node(tx, variant):
+        tx.run("""
+            MERGE (v:Variant {variant_id: $variant_id})
+            ON CREATE SET
+                v.sku = $sku,
+                v.name = $name,
+                v.status = $status,
+                v.deleted = $deleted,
+                v.variation_type = $variation_type,
+                v.created_at = $created_at,
+                v.updated_at = $updated_at,
+                v.list_price = toString($list_price),
+                v.variations = toString($variations),
+                v.physical_attributes = toString($physical_attributes),
+                v.media = toString($media),
+                v.inventory_summary = toString($inventory_summary),
+                v.sales_channels = toString($sales_channels),
+                v.external_identifiers = toString($external_identifiers)
+        """,
+               variant_id=variant["variant_id"],
+               sku=variant["sku"],
+               name=variant["name"],
+               status=variant["status"],
+               deleted=variant["deleted"],
+               variation_type=variant["variation_type"],
+               created_at=variant["created_at"],
+               updated_at=variant["updated_at"],
+               list_price=json.dumps(variant.get("list_price", {})),
+               variations=json.dumps(variant.get("variations", {})),
+               physical_attributes=json.dumps(variant.get("physical_attributes", {})),
+               media=json.dumps(variant.get("media", [])),
+               inventory_summary=json.dumps(variant.get("inventory_summary", [])),
+               sales_channels=json.dumps(variant.get("sales_channels", [])),
+               external_identifiers=json.dumps(variant.get("external_identifiers", []))
+               )
+
+    @staticmethod
+    def _create_product_variant_relationship(tx, variant):
+        tx.run(""" 
+            MATCH (p:Product {product_id: $product_id})
+            MATCH (v:Variant {variant_id: $variant_id})
+            MERGE (p)-[:HAS]->(v)""",
+               product_id=variant["product_id"],
+               variant_id=variant["variant_id"]
+               )
+
+    def _ingest_variant(self, tx, variant):
+        self._create_variant_node(tx, variant)
+        self._create_product_variant_relationship(tx, variant)
+        print(f"Successfully ingested variant: {variant['name']}")
+
+    @staticmethod
+    def _create_order_node(tx, order):
+        tx.run("""
+            MERGE (o:Order {order_id: $order_id})
+            ON CREATE SET
+                o.order_number = $order_number,
+                o.status = $status,
+                o.currency = $currency,
+                o.totals = toString($totals),
+                o.payments = toString($payments),
+                o.shipments = toString($shipments),
+                o.applied_promotions = toString($applied_promotions),
+                o.external_references = toString($external_references),
+                o.notes = $notes,
+                o.created_at = $created_at,
+                o.updated_at = $updated_at,
+                o.order_created_date = $order_created_date
+        """,
+               order_id=order["order_id"],
+               order_number=order["order_number"],
+               status=order["status"],
+               currency=order["currency"],
+               totals=json.dumps(order.get("totals", {})),
+               payments=json.dumps(order.get("payments", [])),
+               shipments=json.dumps(order.get("shipments", [])),
+               applied_promotions=json.dumps(order.get("applied_promotions", [])),
+               external_references=json.dumps(order.get("external_references", [])),
+               notes=order.get("notes", ""),
+               created_at=order["created_at"],
+               updated_at=order["updated_at"],
+               order_created_date=order["order_created_date"]
+               )
+
+    @staticmethod
+    def _create_order_customer_relationships(tx, order):
+        tx.run("""
+            MATCH (o:Order {order_id: $order_id})
+            MERGE (c:Customer {customer_id: $customer_id})
+            MERGE (b:BusinessEntity {business_entity_id: $business_entity_id})
+            MERGE (c)-[:PLACED]->(o)
+            MERGE (o)-[:PLACED_ON_THIS]->(b)
+        """,
+               order_id=order["order_id"],
+               customer_id=order["customer_id"],
+               business_entity_id=order["business_entity_id"]
+               )
+
+    @staticmethod
+    def _create_order_sales_channel_relationship(tx, order):
+        sales_channel = order.get("sales_channel", {})
+        if sales_channel:
             tx.run("""
                 MATCH (o:Order {order_id: $order_id})
-                MERGE (c:Customer {customer_id: $customer_id})
-                MERGE (b:BusinessEntity {business_entity_id: $business_entity_id})
-                MERGE (c)-[:PLACED]->(o)
-                MERGE (o)-[:FOR_BUSINESS_ENTITY]->(b)
+                MERGE (sc:SalesChannel {channel_id: $channel_id})
+                ON CREATE SET
+                    sc.name = $name,
+                    sc.type = $type,
+                    sc.status = $status
+                MERGE (o)-[:THROUGH_CHANNEL]->(sc)
             """,
                    order_id=order["order_id"],
-                   customer_id=order["customer_id"],
-                   business_entity_id=order["business_entity_id"]
+                   channel_id=sales_channel["channel_id"],
+                   name=sales_channel["name"],
+                   type=sales_channel["type"],
+                   status=sales_channel["status"]
                    )
 
-            # MERGE the SalesChannel node and relationship
-            sales_channel = order.get("sales_channel", {})
-            if sales_channel:
-                tx.run("""
-                    MATCH (o:Order {order_id: $order_id})
-                    MERGE (sc:SalesChannel {channel_id: $channel_id})
-                    ON CREATE SET
-                        sc.name = $name,
-                        sc.type = $type,
-                        sc.status = $status
-                    MERGE (o)-[:THROUGH_CHANNEL]->(sc)
-                """,
-                       order_id=order["order_id"],
-                       channel_id=sales_channel["channel_id"],
-                       name=sales_channel["name"],
-                       type=sales_channel["type"],
-                       status=sales_channel["status"]
-                       )
-
-            # Loop through order_items to create CONTAINS relationships to Variant nodes
-            for item in order["order_items"]:
-                tx.run("""
-                    MATCH (o:Order {order_id: $order_id})
-                    MERGE (v:Variant {variant_id: $variant_id})
-                    MERGE (o)-[r:CONTAINS]->(v)
-                    ON CREATE SET
-                        r.quantity = $quantity,
-                        r.price_per_unit = $price_per_unit,
-                        r.line_item_total = $line_item_total,
-                        r.name_at_sale = $name_at_sale,
-                        r.sku = $sku,
-                        r.variations = toString($variations),
-                        r.physical_attributes = toString($physical_attributes)
-                """,
-                       order_id=order["order_id"],
-                       variant_id=item["variant_id"],
-                       quantity=item["quantity"],
-                       price_per_unit=item["price_per_unit"],
-                       line_item_total=item["line_item_total"],
-                       name_at_sale=item["name_at_sale"],
-                       sku=item["sku"],
-                       variations=json.dumps(item["variations"]),
-                       physical_attributes=json.dumps(item["physical_attributes"])
-                       )
-            print(f"Successfully ingested order: {order['order_number']}")
-
-        def ingest_inventory_transaction(tx, inventory):
-            """
-            Ingests a single inventory entry from JSON.
-            """
+    @staticmethod
+    def _create_order_variant_relationships(tx, order):
+        for item in order["order_items"]:
             tx.run("""
-                MERGE (inv:Inventory {inventory_id: $inventory_id})
+                MATCH (o:Order {order_id: $order_id})
+                MERGE (v:Variant {variant_id: $variant_id})
+                MERGE (o)-[r:CONTAINS]->(v)
                 ON CREATE SET
-                    inv.quantity = toString($quantity),
-                    inv.created_at = $created_at,
-                    inv.updated_at = $updated_at
+                    r.quantity = $quantity,
+                    r.line_item_total = $line_item_total
             """,
-                   inventory_id=inventory["inventory_id"],
-                   quantity=json.dumps(inventory["quantity"]),
-                   created_at=inventory["created_at"],
-                   updated_at=inventory["updated_at"]
+                   order_id=order["order_id"],
+                   variant_id=item["variant_id"],
+                   quantity=item["quantity"],
+                   line_item_total=item["line_item_total"]
                    )
-            # Create a relationship to the Variant node
-            tx.run("""
-                MATCH (v:Variant {variant_id: $variant_id})
-                MATCH (inv:Inventory {inventory_id: $inventory_id})
-                MERGE (inv)-[:RECORDS_STOCK_FOR]->(v)
-            """,
-                   variant_id=inventory["variant_id"],
-                   inventory_id=inventory["inventory_id"]
-                   )
-            print(f"Successfully ingested inventory for variant: {inventory['variant_id']}")
 
-        def ingest_customer_transaction(tx, customer):
-            """
-            Ingests a single customer entry from JSON.
-            """
-            tx.run("""
-                MERGE (c:Customer {customer_id: $customer_id})
-                ON CREATE SET
-                    c.email = $email,
-                    c.first_name = $first_name,
-                    c.last_name = $last_name,
-                    c.phone = $phone,
-                    c.customer_segment = $customer_segment,
-                    c.marketing_consent = $marketing_consent,
-                    c.personalization_details = toString($personalization_details),
-                    c.notes = $notes,
-                    c.addresses = toString($addresses),
-                    c.payment_methods = toString($payment_methods),
-                    c.wishlist = toString($wishlist),
-                    c.status = $status,
-                    c.deleted = $deleted,
-                    c.created_at = $created_at,
-                    c.updated_at = $updated_at
-            """,
-                   customer_id=customer["customer_id"],
-                   email=customer["email"],
-                   first_name=customer["first_name"],
-                   last_name=customer["last_name"],
-                   phone=customer["phone"],
-                   customer_segment=customer["customer_segment"],
-                   marketing_consent=customer["marketing_consent"],
-                   personalization_details=json.dumps(customer.get("personalization_details", {})),
-                   notes=customer["notes"],
-                   addresses=json.dumps(customer.get("addresses", [])),
-                   payment_methods=json.dumps(customer.get("payment_methods", [])),
-                   wishlist=json.dumps(customer.get("wishlist", [])),
-                   status=customer["status"],
-                   deleted=customer["deleted"],
-                   created_at=customer["created_at"],
-                   updated_at=customer["updated_at"]
-                   )
-            print(f"Successfully ingested customer: {customer['email']}")
+    def _ingest_order(self, tx, order):
+        self._create_order_node(tx, order)
+        self._create_order_customer_relationships(tx, order)
+        self._create_order_sales_channel_relationship(tx, order)
+        self._create_order_variant_relationships(tx, order)
+        print(f"Successfully ingested order: {order['order_number']}")
 
-        # Loop through each data type and run the corresponding transaction
-        for product in product_data:
-            session.execute_write(ingest_product_transaction, product)
+    @staticmethod
+    def _create_inventory_node(tx, inventory):
+        tx.run("""
+            MERGE (inv:Inventory {inventory_id: $inventory_id})
+            ON CREATE SET
+                inv.quantity = toString($quantity),
+                inv.created_at = $created_at,
+                inv.updated_at = $updated_at
+        """,
+               inventory_id=inventory["inventory_id"],
+               quantity=json.dumps(inventory["quantity"]),
+               created_at=inventory["created_at"],
+               updated_at=inventory["updated_at"]
+               )
 
-        for variant in variants_data:
-            session.execute_write(ingest_variant_transaction, variant)
+    @staticmethod
+    def _create_inventory_variant_relationship(tx, inventory):
+        tx.run("""
+            MATCH (v:Variant {variant_id: $variant_id})
+            MATCH (inv:Inventory {inventory_id: $inventory_id})
+            MERGE (inv)-[:RECORDS_STOCK_FOR]->(v)
+        """,
+               variant_id=inventory["variant_id"],
+               inventory_id=inventory["inventory_id"]
+               )
 
-        for order in orders_data:
-            session.execute_write(ingest_order_transaction, order)
+    def _ingest_inventory(self, tx, inventory):
+        self._create_inventory_node(tx, inventory)
+        self._create_inventory_variant_relationship(tx, inventory)
+        print(f"Successfully ingested inventory for variant: {inventory['variant_id']}")
 
-        for inventory in inventories_data:
-            session.execute_write(ingest_inventory_transaction, inventory)
+    @staticmethod
+    def _create_customer_node(tx, customer):
+        tx.run("""
+            MERGE (c:Customer {customer_id: $customer_id})
+            ON CREATE SET
+                c.email = $email,
+                c.first_name = $first_name,
+                c.last_name = $last_name,
+                c.phone = $phone,
+                c.customer_segment = $customer_segment,
+                c.marketing_consent = $marketing_consent,
+                c.personalization_details = toString($personalization_details),
+                c.notes = $notes,
+                c.addresses = toString($addresses),
+                c.payment_methods = toString($payment_methods),
+                c.wishlist = toString($wishlist),
+                c.status = $status,
+                c.deleted = $deleted,
+                c.created_at = $created_at,
+                c.updated_at = $updated_at
+        """,
+               customer_id=customer["customer_id"],
+               email=customer["email"],
+               first_name=customer["first_name"],
+               last_name=customer["last_name"],
+               phone=customer["phone"],
+               customer_segment=customer["customer_segment"],
+               marketing_consent=customer["marketing_consent"],
+               personalization_details=json.dumps(customer.get("personalization_details", {})),
+               notes=customer["notes"],
+               addresses=json.dumps(customer.get("addresses", [])),
+               payment_methods=json.dumps(customer.get("payment_methods", [])),
+               wishlist=json.dumps(customer.get("wishlist", [])),
+               status=customer["status"],
+               deleted=customer["deleted"],
+               created_at=customer["created_at"],
+               updated_at=customer["updated_at"]
+               )
 
-        for customer in customers_data:
-            session.execute_write(ingest_customer_transaction, customer)
+    def _ingest_customer(self, tx, customer):
+        self._create_customer_node(tx, customer)
+        print(f"Successfully ingested customer: {customer['email']}")
 
 
 if __name__ == "__main__":
@@ -406,15 +395,15 @@ if __name__ == "__main__":
             inventories_data = []
             customers_data = []
             try:
-                with open('ekyam_chat_v3.products.json', 'r') as f:
+                with open('products.json', 'r') as f:
                     products_data = json.load(f)
-                with open('ekyam_chat_v3.variants.json', 'r') as f:
+                with open('variants.json', 'r') as f:
                     variants_data = json.load(f)
-                with open('ekyam_chat_v3.orders.json', 'r') as f:
+                with open('orders.json', 'r') as f:
                     orders_data = json.load(f)
-                with open('ekyam_chat_v3.inventories.json', 'r') as f:
+                with open('Inventories.json', 'r') as f:
                     inventories_data = json.load(f)
-                with open('ekyam_chat_v3.customers.json', 'r') as f:
+                with open('customers.json', 'r') as f:
                     customers_data = json.load(f)
             except FileNotFoundError as e:
                 print(f"Error: {e}. Please ensure all JSON files exist.")
@@ -423,8 +412,14 @@ if __name__ == "__main__":
             # Call the ingestion function once with all the data
             if products_data or variants_data or orders_data or inventories_data or customers_data:
                 print("\n--- Starting data ingestion from JSON files ---")
-                create_nodes_and_relationships(data_driver, db_name, products_data, variants_data, orders_data,
-                                               customers_data, inventories_data)
+                ingestor = Neo4jDataIngestor(data_driver, db_name)
+                ingestor.ingest_data(
+                    products_data,
+                    variants_data,
+                    orders_data,
+                    customers_data,
+                    inventories_data
+                )
                 print("--- Data ingestion complete ---")
             else:
                 print("No data found in any JSON files. Ingestion skipped.")
@@ -435,4 +430,4 @@ if __name__ == "__main__":
             print("Connection failed. The database may not be ready yet. Retrying in 5 seconds...")
             time.sleep(5)
 
-print("\nAll driver connections closed.")
+    print("\nAzll driver connections closed.")

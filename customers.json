@@ -1,0 +1,127 @@
+[
+  {
+  "_id": {
+    "$oid": "685a559cfa88d3f92b08dfec"
+  },
+  "customer_id": "b0f641ed-f82d-44eb-bad4-d801d4a4dd83",
+  "email": "janesmith87@yahoo.com",
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "phone": "+1-555-600-7817",
+  "customer_segment": "premium",
+  "marketing_consent": false,
+  "personalization_details": {
+    "gender": "female",
+    "birth_date": "1990-10-15",
+    "important_dates": [
+      {
+        "label": "anniversary",
+        "date": "2020-06-20"
+      },
+      {
+        "label": "child_birthday",
+        "date": "2022-03-12"
+      }
+    ]
+  },
+  "notes": "New customer; High-value customer",
+  "addresses": [
+    {
+      "address_id": "99d76905-17fd-43b0-919a-901832eeb243",
+      "label": "Home",
+      "is_default": true,
+      "receiver_name": "John Doe",
+      "receiver_phone": "+1-555-364-2610",
+      "street": "8098 Main St",
+      "city": "San Jose",
+      "state": "NY",
+      "zip_code": "43449",
+      "country": "US"
+    },
+    {
+      "address_id": "e96ad936-e9c6-4502-85cb-5c509d6847c5",
+      "label": "Work",
+      "is_default": false,
+      "receiver_name": "John Doe",
+      "receiver_phone": "+1-555-192-4105",
+      "street": "1915 Commerce Ave",
+      "city": "Phoenix",
+      "state": "CA",
+      "zip_code": "76380",
+      "country": "US"
+    }
+  ],
+  "payment_methods": [
+    {
+      "payment_method_id": "c0d1abf7-cf26-4570-9035-d71da49441a0",
+      "type": "credit_card",
+      "gateway_token": "tok_324031421...",
+      "card_last_four": "6731",
+      "card_brand": "Mastercard",
+      "card_expiry_month": 9,
+      "card_expiry_year": 2028,
+      "is_default": true
+    }
+  ],
+  "wishlist": [
+    {
+      "variant_id": "be29df23-03a7-472f-b18f-85cbb9f25e9f",
+      "variant_name": "Luxe Velvet Platform Pumps - Black / 6 / Elegant",
+      "price_at_add": {
+        "amount": 9500,
+        "currency": "USD"
+      },
+      "added_at": "2025-01-10T00:00:00Z"
+    },
+    {
+      "variant_id": "706e5b9b-3e9b-460c-965b-53e1eda793d3",
+      "variant_name": "Luxury Shaggy Velvet Rug - Black / 5' x 7' / Modern",
+      "price_at_add": {
+        "amount": 35000,
+        "currency": "USD"
+      },
+      "added_at": "2025-03-24T00:00:00Z"
+    },
+    {
+      "variant_id": "33220ec4-ccd9-4969-8074-0d1f70b39e7a",
+      "variant_name": "Luxury Bamboo Bath Towel Set - Navy / L / Modern",
+      "price_at_add": {
+        "amount": 5000,
+        "currency": "USD"
+      },
+      "added_at": "2024-11-17T00:00:00Z"
+    },
+    {
+      "variant_id": "abcf63f7-3291-4c85-a36c-f6e323742f2c",
+      "variant_name": "Sporty Knit Mesh Sneakers - White / Size 8 / Sporty",
+      "price_at_add": {
+        "amount": 7800,
+        "currency": "USD"
+      },
+      "added_at": "2025-04-26T00:00:00Z"
+    },
+    {
+      "variant_id": "3334acc3-348a-4424-b76c-0a55f700417e",
+      "variant_name": "Organic Lavender Relaxation Candle - White / Lavender Scent",
+      "price_at_add": {
+        "amount": 1200,
+        "currency": "USD"
+      },
+      "added_at": "2024-11-06T00:00:00Z"
+    },
+    {
+      "variant_id": "d6c85ddb-fc90-4831-9a01-4f00f972f2b6",
+      "variant_name": "Velvet Stiletto Pointed Heels - Black / 7",
+      "price_at_add": {
+        "amount": 9500,
+        "currency": "USD"
+      },
+      "added_at": "2025-03-23T00:00:00Z"
+    }
+  ],
+  "status": "active",
+  "deleted": false,
+  "created_at": "2025-06-24T13:06:05Z",
+  "updated_at": "2025-06-30T19:49:07Z"
+}
+]

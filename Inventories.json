@@ -1,0 +1,17 @@
+[
+  {
+  "_id": {
+    "$oid": "6862cf353aba1f54abb83841"
+  },
+  "inventory_id": "inv_b66c38d4-2178-4c3f-8c49-9c661164a00b",
+  "variant_id": "b57f10f1-3200-480c-95be-59d90309df47",
+  "location_id": "9479cd9f-929c-4a5c-93ea-fc96c7751032",
+  "quantity": {
+    "total": 27,
+    "sellable": 24,
+    "reserved": 3
+  },
+  "created_at": "2025-05-31T23:23:57Z",
+  "updated_at": "2025-06-08T23:23:57Z"
+}
+]

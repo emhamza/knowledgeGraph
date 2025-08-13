@@ -1,0 +1,198 @@
+[
+   {
+    "_id": {
+      "$oid": "684e5bff8a341cd5f0d4cd17"
+    },
+    "product_id": "ce0c0f12-4dee-40ea-9605-a721c23766c1",
+    "sku": "PRD0001",
+    "name": "Luxe Aviator Sunglasses",
+    "short_description": "Discover the epitome of Western elegance with our Luxe Aviator Sunglasses. Handcrafted with premium materials, these iconic aviators offer timeless style and essential UV protection for all-day comfort.",
+    "description": "Elevate your Western-inspired ensemble with our Luxe Aviator Sunglasses, a perfect fusion of sophistication and style. Handcrafted with premium metal frames, these iconic aviators offer both a timeless look and essential UV protection for all-day comfort under the sun. The sleek aviator design exudes a blend of elegance and edginess, making them a must-have accessory for any fashion maven. Step into the spotlight with these chic sunglasses and radiate confidence wherever your Western adventure takes you.",
+    "categories": [
+      {
+        "category_id": "e35c7cb6-09e2-4163-9ae6-c4e27b115d3b",
+        "name": "Accessories",
+        "slug": "accessories"
+      },
+      {
+        "category_id": "6f49ce14-6860-4580-82ae-aa869684fbe7",
+        "name": "Sunglasses",
+        "slug": "sunglasses"
+      }
+    ],
+    "collections": [
+      {
+        "collection_id": "9b595a97-604e-4afd-9982-03ad8962149b",
+        "name": "Garden Gala",
+        "slug": "garden-gala"
+      },
+      {
+        "collection_id": "c489adae-4ef9-4c6b-a50d-5196296e2620",
+        "name": "City Slick",
+        "slug": "city-slick"
+      }
+    ],
+    "partners": [
+      {
+        "partner_id": "951016ac-4ab1-4bcb-bf0f-030bc7d864d8",
+        "type": "supplier",
+        "name": "Premium Fabrics Ltd."
+      },
+      {
+        "partner_id": "4b97203e-2849-4e3b-8ba0-6c7b4794560a",
+        "type": "supplier",
+        "name": "Lifestyle Merchandise"
+      }
+    ],
+    "list_price": {
+      "amount": "109.00",
+      "currency": "USD"
+    },
+    "aggregate_stock": {
+      "total": 779,
+      "sellable": 732,
+      "reserved": 47
+    },
+    "attribute_set_id": null,
+    "physical_attributes": {
+      "weight": 150,
+      "weight_unit": "g",
+      "length": 14,
+      "width": 5.5,
+      "height": 4.2,
+      "dimension_unit": "cm"
+    },
+    "tags": [
+      "Aviator Sunglasses",
+      "Western Fashion",
+      "Premium Metal Frames",
+      "UV Protection",
+      "Iconic Design"
+    ],
+    "compliances": [
+      {
+        "type": "warranty",
+        "period_days": 365,
+        "terms": "Limited warranty against manufacturing defects."
+      },
+      {
+        "type": "certification",
+        "name": "UV Protection",
+        "notes": "Lenses provide 100% UV protection."
+      }
+    ],
+    "handling_instructions": [
+      {
+        "type": "storage",
+        "instruction": "Store in a protective case when not in use."
+      },
+      {
+        "type": "care",
+        "instruction": "Clean lenses with a soft cloth and avoid using harsh chemicals."
+      }
+    ],
+    "external_identifiers": [
+      {
+        "source_system": "Fulfillment_ShipMonk",
+        "identifier": "SMK-730468",
+        "created_at_from_source": "2024-12-28T00:00:00.000000Z",
+        "last_updated_from_source": "2025-01-23T00:00:00.000000Z",
+        "updated_by_from_source": "lisac"
+      },
+      {
+        "source_system": "Ecommerce_Shopify",
+        "identifier": "SHOP-594752",
+        "created_at_from_source": "2024-02-24T00:00:00.000000Z",
+        "last_updated_from_source": "2024-06-25T00:00:00.000000Z",
+        "updated_by_from_source": "dwebb"
+      },
+      {
+        "source_system": "ERP_NetSuite",
+        "identifier": "NS-886999",
+        "created_at_from_source": "2024-02-12T00:00:00.000000Z",
+        "last_updated_from_source": "2024-03-16T00:00:00.000000Z",
+        "updated_by_from_source": "davidk"
+      },
+      {
+        "source_system": "Analytics_Snowflake",
+        "identifier": "SNOW-29894",
+        "created_at_from_source": "2024-10-20T00:00:00.000000Z",
+        "last_updated_from_source": "2025-06-16T00:00:00.000000Z",
+        "updated_by_from_source": "deborahwalker"
+      }
+    ],
+    "variants": [
+      {
+        "variant_id": "b57f10f1-3200-480c-95be-59d90309df47",
+        "name": "Luxe Aviator Sunglasses - Black / Metal",
+        "sku": "AVIATOR-BLK-METAL",
+        "variations": {
+          "color": "Black",
+          "material": "Metal"
+        }
+      },
+      {
+        "variant_id": "6dde4ef2-4246-4b22-ae13-510c3a7f007d",
+        "name": "Luxe Aviator Sunglasses - Gold / Metal",
+        "sku": "AVIATOR-GOLD-METAL",
+        "variations": {
+          "color": "Gold",
+          "material": "Metal"
+        }
+      }
+    ],
+    "media": [
+      {
+        "type": "image",
+        "url": "https://ekyam.com/images/products/premium-cotton-t-shirt-primary.png",
+        "alt_text": "Premium Cotton T-Shirt - Primary product image",
+        "is_primary": true
+      },
+      {
+        "type": "image",
+        "url": "https://ekyam.com/images/products/premium-cotton-t-shirt-1.png",
+        "alt_text": "Premium Cotton T-Shirt - View 1",
+        "is_primary": false
+      },
+      {
+        "type": "image",
+        "url": "https://ekyam.com/images/products/premium-cotton-t-shirt-2.png",
+        "alt_text": "Premium Cotton T-Shirt - View 2",
+        "is_primary": false
+      },
+      {
+        "type": "image",
+        "url": "https://ekyam.com/images/products/premium-cotton-t-shirt-3.webp",
+        "alt_text": "Premium Cotton T-Shirt - View 3",
+        "is_primary": false
+      },
+      {
+        "type": "video",
+        "url": "https://ekyam.com/videos/products/premium-cotton-t-shirt-4.webm",
+        "alt_text": "Premium Cotton T-Shirt - Product video 4",
+        "is_primary": false
+      }
+    ],
+    "marketing": {
+      "seo": {
+        "meta_title": "Buy Luxe Aviator Sunglasses Online | Ekyam",
+        "meta_description": "Shop Luxe Aviator Sunglasses. Make a statement with our Luxe Aviator Sunglasses, crafted with high-quality metal frames for a soph...",
+        "url_slug": "luxe-aviator-sunglasses"
+      },
+      "social_media": {
+        "og_title": "The Perfect Luxe Aviator Sunglasses from Ekyam",
+        "og_description": "Discover Luxe Aviator Sunglasses. Premium quality, exceptional style. Shop now at Ekyam!"
+      }
+    },
+    "status": "active",
+    "deleted": false,
+    "created_at": "2025-04-01T06:34:04.114714",
+    "updated_at": {
+      "$date": "2025-06-30T13:41:38.756Z"
+    },
+    "brand": {
+      "id": "a009c154-c397-4b94-9812-24eafe8ca9e8",
+      "name": "Verve & Velvet"
+    }
+  }
+]
