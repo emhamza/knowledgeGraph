@@ -61,7 +61,7 @@ class Neo4jDataIngestor:
                 session.execute_write(self._ingest_inventory, inventory)
 
             for customer in customers_data:
-                session.execute_write(self._ingest_customer, customer)
+                session.execute_write(self._ingest_customers, customer)
 
     @staticmethod
     def _ingest_product(tx, product):
@@ -226,7 +226,7 @@ class Neo4jDataIngestor:
 
                 // MERGE the Customer and its relationship to the Order
                 WITH o, $customer_id AS customer_id
-                MERGE (c:Customer {customer_id: customer_id})
+                MERGE (c:Customers {customer_id: customer_id})
                 MERGE (c)-[:PLACED]->(o)
 
                 // Handle Sales Channel (now also representing the BusinessEntity)
@@ -331,14 +331,14 @@ class Neo4jDataIngestor:
         print(f"Successfully ingested inventory for variant: {inventory['variant_id']}")
 
     @staticmethod
-    def _ingest_customer(tx, customer):
+    def _ingest_customers(tx, customers):
         """
-        Ingests a single customer, creating the Customer node and
+        Ingests a single customers, creating the Customers node and
         all its associated nodes and relationships in one query.
         """
         # Preprocess wishlist to convert 'price_at_add' from a map to a JSON string
         prepared_wishlist = []
-        for item in customer.get("wishlist", []):
+        for item in customers.get("wishlist", []):
             item_copy = item.copy()
             if "price_at_add" in item_copy and isinstance(item_copy["price_at_add"], dict):
                 item_copy["price_at_add"] = json.dumps(item_copy["price_at_add"])
@@ -346,9 +346,9 @@ class Neo4jDataIngestor:
 
         # The rest of the ingestion logic remains the same
         tx.run("""
-                // MERGE the Customer node first
-                MERGE (c:Customer {customer_id: $customer_id})
-                ON CREATE SET
+                // MERGE the Customers node first
+                MERGE (c:Customers {customer_id: $customer_id})
+                SET
                     c.email = $email,
                     c.first_name = $first_name,
                     c.last_name = $last_name,
@@ -372,7 +372,7 @@ class Neo4jDataIngestor:
                     a.receiver_phone = address.receiver_phone,
                     a.street = address.street,
                     a.city = address.city,
-                    a.state = a.state,
+                    a.state = address.state,
                     a.zip_code = address.zip_code,
                     a.country = address.country
                 MERGE (c)-[rel:HAS_ADDRESS]->(a)
@@ -403,24 +403,26 @@ class Neo4jDataIngestor:
                     w.added_at = item.added_at,
                     w.price_at_add = item.price_at_add // This is now a JSON string
                 """,
-               customer_id=customer["customer_id"],
-               email=customer["email"],
-               first_name=customer["first_name"],
-               last_name=customer["last_name"],
-               phone=customer["phone"],
-               customer_segment=customer["customer_segment"],
-               marketing_consent=customer["marketing_consent"],
-               notes=customer["notes"],
-               status=customer["status"],
-               deleted=customer["deleted"],
-               created_at=customer["created_at"],
-               updated_at=customer["updated_at"],
-               personalization_details=json.dumps(customer.get("personalization_details", {})),
-               addresses=customer.get("addresses", []),
-               payment_methods=customer.get("payment_methods", []),
+               customer_id=customers["customer_id"],
+               email=customers["email"],
+               first_name=customers["first_name"],
+               last_name=customers["last_name"],
+               phone=customers["phone"],
+               customer_segment=customers["customer_segment"],
+               marketing_consent=customers["marketing_consent"],
+               notes=customers["notes"],
+               status=customers["status"],
+               deleted=customers["deleted"],
+               created_at=customers["created_at"],
+               updated_at=customers["updated_at"],
+               personalization_details=json.dumps(customers.get("personalization_details", {})),
+               addresses=customers.get("addresses", []),
+               payment_methods=customers.get("payment_methods", []),
                wishlist=prepared_wishlist  # Pass the prepared list
                )
-        print(f"Successfully ingested customer: {customer['email']}")
+        print(f"Successfully ingested customer: {customers['email']}")
+
+
 if __name__ == "__main__":
     # Corrected database name
     db_name = "knowledge-graph"
