@@ -1,0 +1,126 @@
+[
+    {
+  "_id": {
+    "$oid": "68603e3213f097db86a492ab"
+  },
+  "variant_id": "b57f10f1-3200-480c-95be-59d90309df47",
+  "product_id": "ce0c0f12-4dee-40ea-9605-a721c23766c1",
+  "sku": "AVIATOR-BLK-METAL",
+  "name": "Luxe Aviator Sunglasses - Black / Metal",
+  "list_price": {
+    "amount": "109.00",
+    "currency": "USD"
+  },
+  "variations": {
+    "color": "Black",
+    "material": "Metal"
+  },
+  "physical_attributes": {
+    "weight": 150,
+    "weight_unit": "g",
+    "length": 14,
+    "width": 5.5,
+    "height": 4.2,
+    "dimension_unit": "cm"
+  },
+  "inventory_summary": [
+    {
+      "location_id": "9479cd9f-929c-4a5c-93ea-fc96c7751032",
+      "location_name": "Premium Store - Beverly Hills",
+      "location_type": "store",
+      "total": 27,
+      "sellable": 24,
+      "reserved": 3
+    },
+    {
+      "location_id": "ea753e16-62dd-42bc-9523-d351b4f4ce1f",
+      "location_name": "West Coast Warehouse - Los Angeles",
+      "location_type": "warehouse",
+      "total": 383,
+      "sellable": 355,
+      "reserved": 28
+    },
+    {
+      "location_id": "a6320a75-40bf-4958-99a0-3d6318c5b86c",
+      "location_name": "Flagship Store - New York",
+      "location_type": "store",
+      "total": 39,
+      "sellable": 38,
+      "reserved": 1
+    }
+  ],
+  "sales_channels": [
+    {
+      "channel_id": "b8a3e7e4-3e4d-4f1a-9c6f-8e4d3e4d3e4d",
+      "channel_name": "ecommerce_website",
+      "is_visible": true,
+      "is_backorderable": true,
+      "discountable": true,
+      "min_order_quantity": 1,
+      "max_order_quantity": 50,
+      "shipping_class": "standard",
+      "fulfillment_type": "in-house"
+    },
+    {
+      "channel_id": "c9b4f8f5-4f5e-5g2b-ad7g-9f5e4f5e4f5e",
+      "channel_name": "amazon_marketplace",
+      "is_visible": false,
+      "is_backorderable": false,
+      "discountable": false,
+      "min_order_quantity": 1,
+      "max_order_quantity": 10,
+      "shipping_class": "standard",
+      "fulfillment_type": "FBA"
+    }
+  ],
+  "external_identifiers": [
+    {
+      "source_system": "Fulfillment_ShipMonk",
+      "identifier": "SMK-836213",
+      "created_at_from_source": "2024-10-10T00:00:00.000000Z",
+      "last_updated_from_source": "2025-02-03T00:00:00.000000Z",
+      "updated_by_from_source": "dwebb"
+    },
+    {
+      "source_system": "Ecommerce_Shopify",
+      "identifier": "SHOP-349873",
+      "created_at_from_source": "2024-09-03T00:00:00.000000Z",
+      "last_updated_from_source": "2024-09-05T00:00:00.000000Z",
+      "updated_by_from_source": "lisac"
+    },
+    {
+      "source_system": "ERP_NetSuite",
+      "identifier": "NS-278927",
+      "created_at_from_source": "2024-08-28T00:00:00.000000Z",
+      "last_updated_from_source": "2025-06-27T00:00:00.000000Z",
+      "updated_by_from_source": "chrisb"
+    },
+    {
+      "source_system": "Analytics_Snowflake",
+      "identifier": "SNOW-43708",
+      "created_at_from_source": "2025-04-25T00:00:00.000000Z",
+      "last_updated_from_source": "2025-06-04T00:00:00.000000Z",
+      "updated_by_from_source": "deborahwalker"
+    }
+  ],
+  "media": [
+    {
+      "type": "image",
+      "url": "https://example.com/images/aviator-black-metal-front.jpg",
+      "alt_text": "Black metal aviator sunglasses, front view",
+      "is_primary": true
+    },
+    {
+      "type": "image",
+      "url": "https://example.com/images/aviator-black-metal-side.jpg",
+      "alt_text": "Black metal aviator sunglasses, side view",
+      "is_primary": false
+    }
+  ],
+  "variation_type": "color,material",
+  "created_at": "2025-06-28T19:10:42Z",
+  "updated_at": "2025-06-30T21:59:16Z",
+  "status": "active",
+  "deleted": false
+}
+]

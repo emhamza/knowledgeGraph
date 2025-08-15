@@ -1,0 +1,94 @@
+[
+    {
+  "_id": {
+    "$oid": "685022ef83fa0050b8d06b6d"
+  },
+  "order_id": "b094c65a-8ab5-4acd-9c31-44d22aaa6d77",
+  "order_number": "ORD-2AAA6D77",
+  "customer_id": "f75decb1-d722-4a09-b105-5784765a31c5",
+  "business_entity_id": "7e820970-ce75-4ddd-94a7-f2ddaf9e5ad4",
+  "sales_channel": {
+    "channel_id": "b8a3e7e4-3e4d-4f1a-9c6f-8e4d3e4d3e4d",
+    "name": "ecommerce_website_us",
+    "type": "DTC",
+    "status": "active"
+  },
+  "status": "CANCELLED",
+  "currency": "USD",
+  "totals": {
+    "subtotal": 207,
+    "shipping": 10.5,
+    "tax": 16.56,
+    "discounts": 0,
+    "grand_total": 234.06
+  },
+  "order_items": [
+    {
+      "variant_id": "7e957009-a9eb-49d8-b202-c7a463e1a42b",
+      "product_id": "5093d15b-760e-4ec0-9a60-5e9298b58995",
+      "sku": "GFRM-RQ",
+      "name_at_sale": "Glowing Facial Roller Massager - Rose Quartz",
+      "quantity": 3,
+      "price_per_unit": 69,
+      "line_item_total": 207,
+      "variations": {
+        "color": "Rose Quartz"
+      },
+      "physical_attributes": {
+        "weight": 120,
+        "weight_unit": "g",
+        "length": 15,
+        "width": 5,
+        "height": 2,
+        "dimension_unit": "cm"
+      }
+    }
+  ],
+  "payments": [
+    {
+      "payment_id": "d987dc9e-e260-4579-abe3-73e2b37f9f0d",
+      "payment_method_id": "31e50a5d-2502-4c45-8585-a29a2b976730",
+      "amount": 234.06,
+      "status": "succeeded",
+      "transaction_id": "txn_c89d530a-3f27-49",
+      "payment_date": "2025-06-30T14:00:13Z"
+    }
+  ],
+  "shipments": [
+    {
+      "shipment_id": "ae8944cf-471f-4d0b-9f97-ebd9999a9dfb",
+      "status": "shipped",
+      "carrier": "FedEx",
+      "tracking_number": "TRK236905C8-A99",
+      "shipped_date": "2025-06-30T14:00:13Z",
+      "estimated_delivery_date": "2025-07-05T14:00:13Z",
+      "items": [
+        {
+          "variant_id": "7e957009-a9eb-49d8-b202-c7a463e1a42b",
+          "quantity": 3,
+          "item_name": "None - Glowing Facial Roller Massager - Rose Quartz"
+        }
+      ],
+      "shipping_address": {
+        "receiver_name": "John Doe",
+        "street": "123 Main St",
+        "city": "New York",
+        "state": "NY",
+        "zip_code": "10001",
+        "country": "US"
+      }
+    }
+  ],
+  "applied_promotions": [],
+  "external_references": [
+    {
+      "source_system": "OMS_Salesforce",
+      "identifier": "ORD-SF-CC8B69CA"
+    }
+  ],
+  "notes": "",
+  "created_at": "2025-03-28T02:58:01.391392",
+  "updated_at": "2025-06-30T21:15:50Z",
+  "order_created_date": "2025-03-28T02:58:01.391392"
+}
+]
